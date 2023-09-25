@@ -12,17 +12,17 @@ processor_architecture=$(echo $(uname -p))
 processor_clock_frequency=$(sysctl -n hw.cpufrequency_max)
 cpu_current_clock_speed=$(sysctl -n hw.cpufrequency)
 processor_cores=$(echo "$processor" | sed -n 's|^machdep.cpu.core_count:[ \t]*||p')
-processor_threads_per_core=$(echo "$processor" | sed -n 's|^machdep.cpu.thread_count:[ \t]*||p')
+processor_threads=$(echo "$processor" | sed -n 's|^machdep.cpu.thread_count:[ \t]*||p')
 cpu_load=$(top -l 1 | awk '/CPU usage/ {print $3}')
 
 echo "CPU:"
-echo "  Model                   – $processor_model"
-echo "  Architecture            – $processor_architecture"
-echo "  Frequency               – $processor_clock_frequency Hz"
-echo "  Current frequency       - $cpu_current_clock_speed Hz"
-echo "  Cores number            – $processor_cores"
-echo "  Threads per core number – $processor_threads_per_core"
-echo "  Load                    - $cpu_load"
+echo "  Model             – $processor_model"
+echo "  Architecture      – $processor_architecture"
+echo "  Frequency         – $processor_clock_frequency Hz"
+echo "  Current frequency - $cpu_current_clock_speed Hz"
+echo "  Cores number      – $processor_cores"
+echo "  Threads number    – $processor_threads"
+echo "  Load              - $cpu_load"
 echo
 
 L1_cache=$(echo "$(sysctl -a hw.l1icachesize)" | sed -n 's|^hw.l1icachesize:[ \t]*||p')
@@ -48,7 +48,7 @@ disk_total=$(echo "$disk_info" | awk 'NR==2 {print $2}')
 disk_available=$(echo "$disk_info" | awk 'NR==2 {print $4}')
 partition_count=$(echo "$disk_info" | grep -c '^/dev/')
 unallocated_space=$(diskutil info / | grep 'Free Space' | awk '{print $4}')
-mounted_partitions=$(df -H | grep -v '^Filesystem' | awk '{print $1, $2}')
+mounted_partitions=$(df -H | head -n 2 | sed -n '2 p' | awk '{print $1, $2}')
 swap_info=$(sysctl -n debug.intel.swapCount)
 
 echo "Hard drive:"
@@ -69,16 +69,34 @@ network_interfaces=$(networksetup -listallhardwareports | awk '/Hardware Port|De
 network_interface_count=$(echo "$network_interfaces" | wc -l)
 
 interfaces=$(networksetup -listallhardwareports | awk '/Device:/{print $2}')
-echo "Network interfaces:"
+echo "Network:"
 echo "  Number of interfaces - $(echo "$interfaces" | wc -l)"
 echo
 
 while read -r interface; do
   mac_address=$(ifconfig "$interface" | awk '/ether/{print $2}')
   ip_address=$(ifconfig "$interface" | awk '/inet /{print $2}')
+  download=$(networkQuality -I $interface | sed -n '2 p')
+  upload=$(networkQuality -I $interface | sed -n '3 p')
 
   echo "  Interface name: $interface"
   echo "  MAC: $mac_address"
   echo "  IP: $ip_address"
+  if [[ "$download" == *"Error"* ]]; then
+    echo "  Actual speed: no connection to the Internet"
+  else
+    echo "  Actual speed: $(echo "$download") | $(echo "$upload")"
+  fi
+  maxspeed=$(networksetup -getmedia $interface | sed -n '1 p' | cut -d: -f2-)
+  if [[ "$maxspeed" == *"<full-duplex>" ]]; then
+    echo "  Max supported speed:$(echo "$maxspeed") (1 Gbps)"
+  elif [[ "$maxspeed" == *"not set" ]]; then
+    echo "  Max supported speed:$(echo "$maxspeed")"
+  else
+    channel=$(system_profiler SPAirPortDataType | awk '/PHY Mode:/ { print $3 ; exit }')
+    if [[ "$channel" == *"802.11n" ]]; then
+      echo "  Max supported speed:$(echo "$maxspeed") Wi-Fi $channel (450 Mbps)"
+    fi
+  fi
   echo
 done <<< "$interfaces"
