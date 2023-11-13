@@ -1,7 +1,14 @@
 #!/bin/bash
+echo [@] creating docker network net1
+docker network create net1
 echo [@] executing nginx container on port 8080
-docker run -it -d -p 8080:80 nginx
-echo [@] waiting 2 seconds for nginx to start
-sleep 2
-echo [@] performing Apache Benchmark for localhost:8080
-ab -n 10000 http://localhost:8080/
+docker run -it --name nginx -d -p 8080:80 nginx
+sleep 1
+echo [@] executing httpd container
+docker run -it --name httpd -d httpd
+sleep 1
+echo [@] connecting nginx & httpd containers to net1
+docker network connect net1 nginx
+docker network connect net1 httpd
+echo [@] performing Apache Benchmark for nginx from httpd
+docker exec -it httpd ab -n 30000 -c 1000 nginx/
