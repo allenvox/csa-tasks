@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  whoami1:
+    image: traefik/whoami
+    ports:
+      - "801:80"
+
+  whoami2:
+    image: traefik/whoami
+    ports:
+      - "802:80"
+
+  whoami3:
+    image: traefik/whoami
+    ports:
+      - "803:80"
