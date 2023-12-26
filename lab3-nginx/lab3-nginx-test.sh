@@ -11,4 +11,4 @@ echo [@] connecting nginx & httpd containers to net1
 docker network connect net1 nginx
 docker network connect net1 httpd
 echo [@] performing Apache Benchmark for nginx from httpd
-docker exec -it httpd ab -n 30000 -c 1000 nginx/
+docker exec -it httpd ab -r -n 30000 -c 7000 nginx/

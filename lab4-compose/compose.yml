@@ -13,7 +13,7 @@ services:
   whoami:
     image: traefik/whoami
     deploy:
-      replicas: 3
+      replicas: 5
 
   apachebench:
     image: httpd:latest
